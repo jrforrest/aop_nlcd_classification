@@ -5,8 +5,25 @@ import re
 import pandas
 
 from sklearn import model_selection, svm, ensemble, metrics, naive_bayes, neural_network, preprocessing
+from matplotlib import pyplot
 
 NLCD_CODES = ["DF", "DHI", "EF", "OW", "PH", "SS"]
+
+class Visualizer:
+    def __init__(self, data_set):
+        self.data_set = data_set
+
+    def save_figures(self):
+        pyplot.hist(
+            self.data_set.features_for_class('DF'),
+            facecolor = 'blue')
+
+        pyplot.xlabel('Band')
+        pyplot.ylabel('Val')
+        pyplot.title('DF')
+        pyplot.grid(True)
+
+        pyplot.savefig('/tmp/a.png')
 
 class DataSet:
     def __init__(self, data_frame):
@@ -16,20 +33,18 @@ class DataSet:
         return self.data_frame['NLCD'].cat.codes
 
     def get_features(self):
-        band_keys = [key for key in list(self.data_frame) if re.search("B\d+", key)]
-        return self.data_frame[band_keys]
+        return self.data_frame[self.band_keys()]
 
-    def get_scaled_features(self):
-        scaler = preprocessing.StandardScaler()
-        return scaler.fit_transform(self.get_features())
+    def features_for_class(self, nlcd_code):
+        return self.data_frame[self.data_frame['NLCD'] == nlcd_code][self.band_keys()]
 
-    def scale_features():
-        scaler = preprocessing.StandardScaler
+    def band_keys(self):
+        return [key for key in list(self.data_frame) if re.search("B\d+", key)]
 
     def split_samplings(self, test_size):
         train, test = model_selection.train_test_split(
             self.data_frame,
-            test_size=test_size)
+            test_size = test_size)
         return DataSet(train), DataSet(test)
 
 class Trainer:
@@ -53,8 +68,6 @@ class Trainer:
             self.scaler.fit(self.data_set.get_features())
 
             scaled_training_features = self.scaler.transform(self.training_set.get_features())
-
-            import ipdb; ipdb.set_trace()
 
             for model in self.models.values():
                 model.fit(scaled_training_features, self.training_set.get_classes())
@@ -99,6 +112,9 @@ def load_data_set():
 
     return DataSet(data_frame)
 
+def render_histograms():
+    Visualizer(load_data_set()).render_histogram('DF')
+
 def build_trainer():
     return Trainer(load_data_set())
 
@@ -107,6 +123,7 @@ def main():
     trainer.fit()
     print(trainer.accuracies())
     print(trainer.accuracies_on_trained())
+    Visualizer(trainer.data_set).save_figures()
 
 if __name__ == "__main__":
     main()
