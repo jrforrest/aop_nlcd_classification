@@ -19,13 +19,6 @@ class DataSet:
         band_keys = [key for key in list(self.data_frame) if re.search("B\d+", key)]
         return self.data_frame[band_keys]
 
-    def get_scaled_features(self):
-        scaler = preprocessing.StandardScaler()
-        return scaler.fit_transform(self.get_features())
-
-    def scale_features():
-        scaler = preprocessing.StandardScaler
-
     def split_samplings(self, test_size):
         train, test = model_selection.train_test_split(
             self.data_frame,
@@ -44,7 +37,9 @@ class Trainer:
                 min_samples_split = 0.25,
                 max_features = "sqrt"),
             'gnb': naive_bayes.GaussianNB(),
-            'mlp': neural_network.MLPClassifier(max_iter = 2000, hidden_layer_sizes = [100])
+            'mlp': neural_network.MLPClassifier(
+                max_iter = 2000,
+                hidden_layer_sizes = [100])
         }
         self.is_fit = False
 
@@ -53,8 +48,6 @@ class Trainer:
             self.scaler.fit(self.data_set.get_features())
 
             scaled_training_features = self.scaler.transform(self.training_set.get_features())
-
-            import ipdb; ipdb.set_trace()
 
             for model in self.models.values():
                 model.fit(scaled_training_features, self.training_set.get_classes())
