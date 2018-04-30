@@ -4,6 +4,8 @@ import os
 import re
 import pandas
 
+from ipdb import set_trace as st;
+
 from sklearn import model_selection, svm, ensemble, metrics, naive_bayes, neural_network, preprocessing
 from matplotlib import pyplot
 
@@ -14,16 +16,19 @@ class Visualizer:
         self.data_set = data_set
 
     def save_figures(self):
-        pyplot.hist(
-            self.data_set.features_for_class('DF'),
-            facecolor = 'blue')
+        scaled_features = self.data_set.scaled().without_empty_rows().features_by_class()
+        unscaled_features = self.data_set.without_empty_rows().features_by_class()
 
-        pyplot.xlabel('Band')
-        pyplot.ylabel('Val')
-        pyplot.title('DF')
-        pyplot.grid(True)
+        plots = {
+              'unscaled_mean': unscaled_features.mean(),
+              'unscaled_median': unscaled_features.median(),
+              'scaled_mean': scaled_features.mean(),
+              'scaled_median': scaled_features.median()
+        }
 
-        pyplot.savefig('/tmp/a.png')
+        for name, data in plots.items():
+            data.plot.bar(title = name, figsize = (15, 10))
+            pyplot.savefig("/tmp/" + name + ".png")
 
 class DataSet:
     def __init__(self, data_frame):
@@ -41,11 +46,26 @@ class DataSet:
     def band_keys(self):
         return [key for key in list(self.data_frame) if re.search("B\d+", key)]
 
+    def scaled(self):
+        scaler = preprocessing.MinMaxScaler()
+        new = self.data_frame.copy()
+        new[self.band_keys()] = scaler.fit_transform(self.get_features())
+        return DataSet(new)
+
+    def features_by_class(self):
+        return self.data_frame.groupby('NLCD')[self.band_keys()]
+
+    def non_feature_columns(self):
+        return self.data_frame.columns.difference(self.band_keys())
+
     def split_samplings(self, test_size):
         train, test = model_selection.train_test_split(
             self.data_frame,
             test_size = test_size)
         return DataSet(train), DataSet(test)
+
+    def without_empty_rows(self):
+        return DataSet(self.data_frame.dropna(axis = 'index', how = 'any'))
 
 class Trainer:
     def __init__(self, data_set):
@@ -120,9 +140,9 @@ def build_trainer():
 
 def main():
     trainer = build_trainer()
-    trainer.fit()
-    print(trainer.accuracies())
-    print(trainer.accuracies_on_trained())
+    #trainer.fit()
+    #print(trainer.accuracies())
+    #print(trainer.accuracies_on_trained())
     Visualizer(trainer.data_set).save_figures()
 
 if __name__ == "__main__":
